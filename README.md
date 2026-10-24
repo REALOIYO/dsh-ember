@@ -44,19 +44,35 @@ This plugin repaints the first and turns the second into a slider.
 
 ### 2. 推理等级滑块 / Reasoning effort slider
 
-- 滑块档位**完全由上游下发决定**，不写死
-- 1 / 2 / 3 / 4 / 6 档都验证过；档数 < 2 时自动让位给官方选择器
-- 拖动时实时预览档位名，**松手才提交**，不会一路刷请求
-- 键盘方向键 / Home / End 同样可用
-- **官方模型选择器原样保留** —— 滑块是新增控件，不是替换
-- `/model` 命令照常可用
+打开模型菜单 → 点「推理等级」，那一行下面直接出现一条滑块：
 
-- The ladder is **entirely host-driven**, nothing hard-coded
-- Verified against 1 / 2 / 3 / 4 / 6 rungs; below 2 it steps aside for the shipped picker
-- Dragging previews the rung name; **the write happens on release**, so a drag is not a request per pixel
+```
+┌──────────────────────────┐
+│ 模型    Deepseek-V4.1…  ›│
+│ 推理等级            High ›│
+└──────────────────────────┘
+            ↓ 点进
+┌──────────────────────────┐
+│ [=========|==========]   │  ← 滑块，停在当前档
+│ Low       **High**    Max │  ← 档名当刻度，当前档加粗
+└──────────────────────────┘
+```
+
+- 档位**完全由上游下发决定**：读菜单自身的 `menuitemradio`，不写死
+- 1 / 2 / 3 / 4 / 6 档都验证过；少于 2 档时不注入，交回官方列表
+- 拖动时刻度**即时高亮**（热更新），松手才提交
+- 键盘方向键 / Home / End 同样可用
+- 提交走**官方 radio 的 click**，与手点完全同一条写入路径
+- 官方 radio 被折叠（CSS 类）而非删除 —— 它们是数据源和写入入口
+
+- Ladder length comes from the menu's own `menuitemradio` rows, never hard-coded
+- 1 / 2 / 3 / 4 / 6 rungs verified; below 2 the slider is not injected and the
+  shipped list stays
+- The scale highlights live while dragging; the write lands on release
 - Arrow keys, Home and End work as well
-- **The shipped model selector is untouched** — this adds a control, it does not replace one
-- `/model` keeps working
+- Commits by clicking the host's own radio — the exact path a user click takes
+- The shipped radios are folded with a CSS class, not removed: they are the
+  data source and the write entry point
 
 ---
 
@@ -83,36 +99,27 @@ Install, then **restart DSH**. It is browser-only; there is no host-side logic.
 | 项 | 要求 |
 |---|---|
 | DSH | `0.2.1-rc.3`（在 `rc.3` 上开发与验证） |
-| 槽位 | `conversation.input.right`（`list` / `session`） |
-| 依赖服务 | `slots`、`locale`、`modelDirectories` |
+| 菜单 | `[role="menu"][aria-label="模型与推理等级"]` |
+| 依赖服务 | `locale` |
 | 平台 | Web（桌面端与局域网访问一致） |
 
-**为什么是 `conversation.input.right` 而不是 `dock`**
+**为什么注入 DOM，而不是用槽位**
 
-`conversation.input.dock` 在输入框**上方**，是一整行；真正的输入行在它下面。
-`conversation.input.right` 与官方模型选择器**同一行**，且官方先渲染它、再渲染模型选择器：
+输入行里的模型选择器是 `conversation.input.model`，一个 `single` 槽位：
 
-```js
-jsxs("div", { className: standardControls, children: [
-  renderSlot("conversation.input.right", {}),
-  renderSlot("conversation.input.model", { locked })
-]})
-```
+- 同 priority 重复注册**直接抛错**（`already has a registration`），想接管就得整体重写那份 79KB 的 `ModelSelect`（菜单、搜索、键盘导航、浮层定位、失败重试、toast）
+- `single` 槽位也不能容纳第二个 child —— child 必须在父 entry 的 `children` 表里声明，而那张表属于官方包
 
-所以滑块会出现在模型选择器左边，贴着它，这正是想要的落点。
+菜单内部没有留给第三方的缝隙，所以走唯一不碰官方的路：**观察菜单，插入一个它自己没写过的元素**。
 
-**为什么不去 shadow 官方组件**
+**Why DOM injection rather than a slot**
 
-`single` 槽位在同 `priority` 重复注册会直接抛错：
-
-```js
-if (occupant) throw new Error(`single slot "${name}" already has a registration
-  at priority ${priority} — register at a different priority to shadow it (lowest renders)`)
-```
-
-换 `priority: -1` 确实能遮蔽，但代价是**整个 `ModelSelect` 由本插件重写** —— 那份实现含搜索框、
-方向键导航、`Escape` / `Shift+Tab` 焦点管理、浮层定位、失败重试与 toast。为一个滑块重写它不划算，
-所以选择新增 list id。
+The composer model seat is a `single` slot: re-registering at the same priority
+throws, so taking it over means reimplementing the whole 79KB ModelSelect. A
+`single` slot also cannot host a second child — child slots are declared by the
+parent entry's `children` table, which belongs to the shipped package. There is
+no seam inside its popup, so the only route that leaves the host untouched is to
+observe the menu and insert one element it did not author.
 
 ---
 
@@ -143,29 +150,51 @@ if (occupant) throw new Error(`single slot "${name}" already has a registration
 判据故意从严：既要 `aria-label` 像触发器、又要含完全权限文案，两个条件都满足才动手 ——
 官方哪天改了文案，结果是「不变红」而不是「染错按钮」。
 
-### 滑块：`useSyncExternalStore` + 松手提交
+### 滑块：读菜单、写菜单
 
-从 `conversation.input.right` 的 `inject` 面拿到的是与官方选择器**同一套**：
-
-```js
-{ directory: ModelDirectory.store,   // 快照，含 current / groups / status
-  load,                              // 触发目录加载
-  select }                           // 提交 { provider, model, reasoningEffort }
-```
-
-档位从 `model.reasoning.efforts` 读，当前值用官方同款表达式：
+第一步是找到菜单。用它的**无障碍名**匹配，不用哈希类名：
 
 ```js
-current.reasoningEffort ?? reasoning.defaultEffort
+document.querySelectorAll('[role="menu"]')
+  → aria-label 匹配 模型与推理等级 / Model and reasoning effort
 ```
 
-`defaultEffort === undefined` 时补一个「默认」档，与官方选择器一致。
+哈希类名（如 `_9r0rkG_*`）每次构建都变，而 `aria-label` 是产品文案。
 
-提交走 `select()`，与官方点击菜单项是同一条写入路径 —— 不点 DOM，不另开通道。
+档位不是猜的，是**读官方自己的行**：
 
-**为什么松手才提交**：`ModelDirectory.select` 没有节流，`input` 事件逐像素触发，
-每一档都会打一次 `session.selectModel`。所以拖动只更新本地 `draft`，
-在 `pointerup` / `keyup` / `blur` 时才真正提交。
+```js
+menu.querySelectorAll('[role="menuitemradio"]')
+→ [{ label: 'Low', checked: false, node: <button> },
+   { label: 'High', checked: true, node: <button> },
+   { label: 'Max', checked: false, node: <button> }]
+```
+
+`aria-checked="true"` 那一项就是当前档；数组顺序就是上游声明的顺序。
+
+提交时**点击官方 radio**：
+
+```js
+radio.click();
+```
+
+这样写入走的是用户手点完全相同的路径 —— 同一个 Remote 调用、同一个 pending
+状态、同一套失败处理。插件不新开写入通道。
+
+节点可能因官方重渲染而失效，所以点击前先确认它还在文档里，不在就按档名重新解析一次。
+
+**为什么折叠而不是删除 radio**：它们是档位名的来源、当前档的判据、以及写入的入口。
+删掉之后滑块既读不到数据也写不进去。
+
+折叠用 CSS 类（`.dsh-ui-refresh__folded`）而非内联 `display:none`，
+这样插件卸载时类被清掉、规则随样式表消失，**不会把用户的菜单永久弄空**。
+卸载路径实测 9/9 全部还原。
+
+**为什么松手才提交**：拖动过程中只重画刻度与 `aria-valuetext`，不写数据。
+一旦在 `input` 事件里提交，一次拖动会打出十几次切换。
+
+**只注入、不接管**：官方那两行（模型 / 推理等级）原样保留，只是在推理等级下方
+多了一个本插件写的块。官方菜单自己怎么渲染、怎么定位、怎么处理键盘，完全没动。
 
 ---
 
