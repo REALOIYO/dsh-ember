@@ -1,4 +1,4 @@
-# dsh-ui-refresh
+# dsh-ember
 
 [![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness)
 [![install](https://img.shields.io/badge/install-dsh%20plugin%20add-4D6BFE?style=flat-square)](#安装--install)
@@ -79,13 +79,13 @@ This plugin repaints the first and turns the second into a slider.
 ## 安装 / Install
 
 ```bash
-dsh plugin add dsh-ui-refresh
+dsh plugin add dsh-ember
 ```
 
 也可以从源码装：
 
 ```bash
-dsh plugin add F:/path/to/dsh-ui-refresh
+dsh plugin add F:/path/to/dsh-ember
 ```
 
 装完**重启 DSH**。这是纯前端插件，没有服务端逻辑。
@@ -186,7 +186,7 @@ radio.click();
 **为什么折叠而不是删除 radio**：它们是档位名的来源、当前档的判据、以及写入的入口。
 删掉之后滑块既读不到数据也写不进去。
 
-折叠用 CSS 类（`.dsh-ui-refresh__folded`）而非内联 `display:none`，
+折叠用 CSS 类（`.dsh-ember__folded`）而非内联 `display:none`，
 这样插件卸载时类被清掉、规则随样式表消失，**不会把用户的菜单永久弄空**。
 卸载路径实测 9/9 全部还原。
 
@@ -211,8 +211,8 @@ radio.click();
 ## 开发 / Development
 
 ```bash
-git clone https://github.com/REALOIYO/dsh-ui-refresh
-cd dsh-ui-refresh
+git clone https://github.com/REALOIYO/dsh-ember
+cd dsh-ember
 ```
 
 目录：
