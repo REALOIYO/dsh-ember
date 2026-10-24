@@ -20,7 +20,13 @@
     "ui",
     "theme",
     "animation",
-    "cordis"
+    "cordis",
+    "推理等级",
+    "完全权限",
+    "滑块",
+    "输入区",
+    "界面增强",
+    "插件"
   ],
   "type": "module",
   "main": "lib/index.js",
