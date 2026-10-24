@@ -8,6 +8,10 @@
 
 **Reasoning effort becomes a slider; full access turns red.** Two things, one plugin, no shipped component replaced.
 
+![推理等级滑块停在 Max 档：左侧浅色渐变，右侧白热尾焰从旋钮向左收拢，轨道上散落着被甩出的余烬碎片](assets/effort-slider-max-dark.png)
+
+<p align="center"><sub>推理等级滑块 · Max 档（暗色主题）<br>Effort slider at the top rung · dark theme</sub></p>
+
 ---
 
 ## 为什么 / Why
