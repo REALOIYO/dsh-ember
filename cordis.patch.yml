@@ -1,0 +1,6 @@
+# dsh-ui-refresh profile patch layer — insert one loader entry.
+# The browser half is picked up through the package's dsh.client declaration,
+# exactly like the shipped ui-* packages.
+- insert:
+    - id: ui-refresh
+      name: 'dsh-ui-refresh'

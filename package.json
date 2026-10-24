@@ -1,0 +1,57 @@
+{
+  "name": "dsh-ui-refresh",
+  "version": "0.1.0",
+  "description": "Composer refresh for DSH: the full-access permission trigger turns red in both themes, and reasoning effort becomes an adaptive slider driven by the host-advertised ladder.",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "deepseek",
+    "permission",
+    "reasoning-effort",
+    "slider",
+    "composer",
+    "ui",
+    "cordis"
+  ],
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "package.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/REALOIYO/dsh-ui-refresh.git"
+  },
+  "homepage": "https://github.com/REALOIYO/dsh-ui-refresh#readme",
+  "bugs": {
+    "url": "https://github.com/REALOIYO/dsh-ui-refresh/issues"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-model-selection",
+        "@deepseek-ai/dsh-client-locale"
+      ]
+    }
+  }
+}
