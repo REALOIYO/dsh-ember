@@ -8,7 +8,7 @@
 
 **Reasoning effort becomes a slider; full access turns red.** Two things, one plugin, no shipped component replaced.
 
-![推理等级滑块停在 Max 档：轨道左侧铺满从青蓝到赤红的渐变，散落着被甩出的方块余烬；右侧白热尾焰从旋钮球体根部向左喷出，根部比球体更宽将球包住](assets/effort-slider-max-dark.png)
+![推理等级滑块停在 Max 档：三个档位 Low / High / Max 均匀排在轨道下方，Max 加粗高亮；轨道左侧铺着暗红渐变、散落着被甩出的方块余烬；右侧白热尾焰从旋钮球体根部向左喷出，根部比球体更宽，把球包住](assets/effort-slider-max-dark.png)
 
 <p align="center"><sub>推理等级滑块 · Max 档（暗色主题）<br>Effort slider at the top rung · dark theme</sub></p>
 
