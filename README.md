@@ -48,53 +48,56 @@ This plugin repaints the first and turns the second into a slider.
 
 ### 2. 推理等级滑块 / Reasoning effort slider
 
-打开模型菜单 → 点「推理等级」，那一行下面直接出现一条滑块：
+打开模型菜单，「推理等级」那一行下面**直接**就是滑块 —— 不用点进去：
 
 ```
-┌──────────────────────────┐
-│ 模型    Deepseek-V4.1…  ›│
-│ 推理等级            High ›│
-└──────────────────────────┘
-            ↓ 点进
-┌──────────────────────────┐
-│ [=========|==========]   │  ← 滑块，停在当前档
-│ Low       **High**    Max │  ← 档名当刻度，当前档加粗
-└──────────────────────────┘
+┌──────────────────────────────┐
+│ 模型        Deepseek-V4.1…  ›│
+│ 推理等级                High ›│
+│ [======|===============]     │  ← 滑块，停在当前档
+│ Low        **High**       Max│  ← 档名当刻度，当前档加粗
+└──────────────────────────────┘
 ```
 
-- 档位**完全由上游下发决定**：读菜单自身的 `menuitemradio`，不写死
-- 1 / 2 / 3 / 4 / 6 档都验证过；少于 2 档时不注入，交回官方列表
-- 拖动时刻度**即时高亮**（热更新），松手才提交
+- 档位**完全由上游下发决定**：读模型适配器报的 `efforts`，不写死
+- 1 / 2 / 3 / 4 / 6 档都验证过；只有 1 档时钉在右端并标 `aria-readonly`
+- 拖动时刻度**即时高亮**（热更新），松手才吸附到最近档并提交
 - 键盘方向键 / Home / End 同样可用
-- 提交走**官方 radio 的 click**，与手点完全同一条写入路径
-- 官方 radio 被折叠（CSS 类）而非删除 —— 它们是数据源和写入入口
+- 写入走 `modelDirectories` 的 `select()` —— 与官方选择器同一个服务调用
+- 每档在旋钮背后画各自的余烬尾焰：档位越高，尾焰越长越热
 
-- Ladder length comes from the menu's own `menuitemradio` rows, never hard-coded
-- 1 / 2 / 3 / 4 / 6 rungs verified; below 2 the slider is not injected and the
-  shipped list stays
-- The scale highlights live while dragging; the write lands on release
+- Ladder length comes from the model adapter's own `efforts`, never hard-coded
+- 1 / 2 / 3 / 4 / 6 rungs verified; with a single rung the knob parks at the
+  right end and the rail is marked `aria-readonly`
+- The scale highlights live while dragging; the knob snaps to the nearest rung
+  and commits on release
 - Arrow keys, Home and End work as well
-- Commits by clicking the host's own radio — the exact path a user click takes
-- The shipped radios are folded with a CSS class, not removed: they are the
-  data source and the write entry point
+- Writes through `modelDirectories` `select()` — the same service call the
+  shipped picker makes
+- Each rung paints its own ember plume behind the knob: higher rungs burn longer
+  and hotter
 
 ---
 
 ## 安装 / Install
 
+从 GitHub 装：
+
 ```bash
-dsh plugin add dsh-ember
+dsh plugin add https://github.com/REALOIYO/dsh-ember
 ```
 
-也可以从源码装：
+或者先克隆到本地，再指向那个目录：
 
 ```bash
+git clone https://github.com/REALOIYO/dsh-ember
 dsh plugin add F:/path/to/dsh-ember
 ```
 
 装完**重启 DSH**。这是纯前端插件，没有服务端逻辑。
 
-Install, then **restart DSH**. It is browser-only; there is no host-side logic.
+Install from GitHub, then **restart DSH**. It is browser-only; there is no
+host-side logic.
 
 ---
 
@@ -154,7 +157,7 @@ observe the menu and insert one element it did not author.
 判据故意从严：既要 `aria-label` 像触发器、又要含完全权限文案，两个条件都满足才动手 ——
 官方哪天改了文案，结果是「不变红」而不是「染错按钮」。
 
-### 滑块：读菜单、写菜单
+### 滑块：读服务、写服务
 
 第一步是找到菜单。用它的**无障碍名**匹配，不用哈希类名：
 
@@ -165,37 +168,34 @@ document.querySelectorAll('[role="menu"]')
 
 哈希类名（如 `_9r0rkG_*`）每次构建都变，而 `aria-label` 是产品文案。
 
-档位不是猜的，是**读官方自己的行**：
+档位不是猜的，是**读模型适配器报的阶梯**：
 
 ```js
-menu.querySelectorAll('[role="menuitemradio"]')
-→ [{ label: 'Low', checked: false, node: <button> },
-   { label: 'High', checked: true, node: <button> },
-   { label: 'Max', checked: false, node: <button> }]
+directory.store.getSnapshot()
+→ snapshot.groups[i].models[j].reasoning.efforts
+→ [{ id: 'low', name: 'Low' }, { id: 'high', name: 'High' }, …]
 ```
 
-`aria-checked="true"` 那一项就是当前档；数组顺序就是上游声明的顺序。
+`current.reasoningEffort` 指向当前档，数组顺序就是上游声明的顺序。这样一来
+档位数与档名全都跟着上游走，上游加档不用改这个插件。
 
-提交时**点击官方 radio**：
+提交走 `directory.select()`：
 
 ```js
-radio.click();
+await directory.select(levelId);
 ```
 
-这样写入走的是用户手点完全相同的路径 —— 同一个 Remote 调用、同一个 pending
-状态、同一套失败处理。插件不新开写入通道。
+这是官方选择器用的同一个服务调用，插件不新开写入通道，也不点任何宿主节点。
 
-节点可能因官方重渲染而失效，所以点击前先确认它还在文档里，不在就按档名重新解析一次。
-
-**为什么折叠而不是删除 radio**：它们是档位名的来源、当前档的判据、以及写入的入口。
-删掉之后滑块既读不到数据也写不进去。
-
-折叠用 CSS 类（`.dsh-ember__folded`）而非内联 `display:none`，
-这样插件卸载时类被清掉、规则随样式表消失，**不会把用户的菜单永久弄空**。
-卸载路径实测 9/9 全部还原。
+**为什么要等存储确认**：`select()` 是异步的，快照在写入后仍会短暂回报旧档位。
+如果立刻采纳它，旋钮会先吸附到新档、再弹回旧档 —— 所以本地记住「我要的是哪档」，
+等上游追上来（或超时）之后再认账。
 
 **为什么松手才提交**：拖动过程中只重画刻度与 `aria-valuetext`，不写数据。
-一旦在 `input` 事件里提交，一次拖动会打出十几次切换。
+一旦在 `pointermove` 里提交，一次拖动会打出十几次切换。
+
+**为什么落点只算一次**：滑块几何由 `pct`（0..1）决定，不由档位数决定。
+2 档和 6 档得到的是同一条轨道、同一条尾焰，只是刻度数量不同。
 
 **只注入、不接管**：官方那两行（模型 / 推理等级）原样保留，只是在推理等级下方
 多了一个本插件写的块。官方菜单自己怎么渲染、怎么定位、怎么处理键盘，完全没动。
@@ -206,9 +206,13 @@ radio.click();
 
 - **依赖 `aria-label` 文案判定完全权限。** 官方若改文案（如「完整权限」），红色会失效但不会误染。
   修正位置：`lib/client.js` 的 `FULL_ACCESS_LABELS`。
-- **滑块宽度固定 74px**，六档时档位名可能截断（有 `title` 与 `aria-valuetext` 兜底）。
+- **轨道宽度跟随菜单行**，档名过长时相邻刻度可能靠得较近（有 `title` 与 `aria-valuetext` 兜底）。
 - **不处理 subagent 会话**（`available === false`），与官方选择器一致。
 - 模型切换未纳入滑块 —— 用官方选择器或 `/model`。
+- **菜单不可见时环境动画停止。** 宿主用 `display:none` / `visibility:hidden` / `opacity:0`
+  或直接移除节点关闭菜单时，循环都会自停，并在菜单重新可见后自行恢复。
+- **动画按需降级**：`prefers-reduced-motion: reduce` 时不隐藏 canvas（尾焰是视觉主体），
+  而是降低绘制本身的抖动与亮度变化。
 
 ---
 
