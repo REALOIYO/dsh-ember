@@ -36,6 +36,8 @@ This plugin repaints the first and turns the second into a slider.
 
 ### 1. 完全权限变红 / Full access in red
 
+![完全权限变红：展开的权限菜单里「询问」「只读」保持中性灰，「完全权限」这一行连同盾牌图标变成主题红并带勾；下方 composer 里的权限触发器同样是红色](assets/full-access-red-dark.png)
+
 - 「完全权限」的文字和盾牌图标都变成主题红
 - **明暗主题都红**，各用 DSH 自带的危险色：亮色 `#ec1313`，暗色 `#f25a5a`
 - 只在该预设被选中时红；切回「仅可查看」自动恢复原色
