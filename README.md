@@ -60,17 +60,20 @@ This plugin repaints the first and turns the second into a slider.
 ```
 
 - 档位**完全由上游下发决定**：读模型适配器报的 `efforts`，不写死
+- **连续拖动，不是分段按钮**：滑块位置是浮点数，跟手走；拖动时只重画，松手才吸附到最近档并提交
 - 1 / 2 / 3 / 4 / 6 档都验证过；只有 1 档时钉在右端并标 `aria-readonly`
-- 拖动时刻度**即时高亮**（热更新），松手才吸附到最近档并提交
+- 拖动时刻度**即时高亮**（热更新）
 - 键盘方向键 / Home / End 同样可用
 - 写入走 `modelDirectories` 的 `select()` —— 与官方选择器同一个服务调用
 - 每档在旋钮背后画各自的余烬尾焰：档位越高，尾焰越长越热
 
 - Ladder length comes from the model adapter's own `efforts`, never hard-coded
+- **Continuously draggable, not a row of segmented buttons**: the position is a
+  float that follows the pointer; dragging only repaints, and the knob snaps to
+  the nearest rung and commits on release
 - 1 / 2 / 3 / 4 / 6 rungs verified; with a single rung the knob parks at the
   right end and the rail is marked `aria-readonly`
-- The scale highlights live while dragging; the knob snaps to the nearest rung
-  and commits on release
+- The scale highlights live while dragging
 - Arrow keys, Home and End work as well
 - Writes through `modelDirectories` `select()` — the same service call the
   shipped picker makes
