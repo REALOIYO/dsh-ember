@@ -187,8 +187,15 @@ directory.store.getSnapshot()
 提交走 `directory.select()`：
 
 ```js
-await directory.select(levelId);
+await directory.select({
+  provider: current.provider,
+  model: current.model,
+  reasoningEffort: levelId,
+});
 ```
+
+传入的是完整的三元组，不是裸的档位 id —— provider 与 model 原样回填当前值，
+只有 `reasoningEffort` 变化。
 
 这是官方选择器用的同一个服务调用，插件不新开写入通道，也不点任何宿主节点。
 
