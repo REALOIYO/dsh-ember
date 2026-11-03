@@ -4,9 +4,9 @@
 [![install](https://img.shields.io/badge/install-dsh%20plugin%20add-4D6BFE?style=flat-square)](#安装--install)
 [![license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 
-**推理等级变成滑块，完全权限变红。** 两件事，一个插件，不动任何官方组件。
+**推理等级变成滑块，完全权限变红，模型菜单里认得出你是谁。** 三件事，一个插件，不动任何官方组件。
 
-**Reasoning effort becomes a slider; full access turns red.** Two things, one plugin, no shipped component replaced.
+**Reasoning effort becomes a slider; full access turns red; the model picker finally tells you where you are.** Three things, one plugin, no shipped component replaced.
 
 ![推理等级滑块停在 Max 档：三个档位 Low / High / Max 均匀排在轨道下方，Max 加粗高亮；轨道左侧铺着暗红渐变、散落着被甩出的方块余烬；右侧白热尾焰从旋钮球体根部向左喷出，根部比球体更宽，把球包住](assets/effort-slider-max-dark.png)
 
@@ -21,14 +21,17 @@ DSH 的 composer 底部有两处可以更好用：
 1. **完全权限是灰色的。** 「完全权限」意味着智能体能直接执行敏感操作 —— 删文件、跑命令、改系统。它和「仅可查看」用同一个颜色，视觉上没有任何区别。
 2. **推理等级是一串菜单项。** 想从 Low 调到 High，要点开菜单、找到那一行、点它。档位越多找得越慢，而且看不出「现在在整条阶梯的哪个位置」。
 
-这个插件把第一处变红，把第二处变成滑块。
+3. **模型菜单里认不出自己在哪。** 分组标题没有任何样式，滚动起来不知道当前是哪家 provider；选中的模型只有一个 14px 的对勾，官方 CSS 里 `._9r0rkG_selected` 明确写着 `background:0 0`（透明）—— 扫一眼落不下点。
+
+这个插件把第一处变红，把第二处变成滑块，把第三处补上辨识度。
 
 DSH's composer has two spots that could read better:
 
 1. **Full access is grey.** It permits destructive operations — deleting files, running commands, touching the system — yet it looks exactly like read-only.
 2. **Effort is a list of menu rows.** Going from Low to High means opening a menu and hunting for the row. More rungs, more hunting, and no sense of where you sit on the ladder.
+3. **The model picker gives you no bearings.** Group headings have no styling of their own, so once the list scrolls you lose track of which provider you are in; the selected row carries only a 14px check mark, and the shipped `._9r0rkG_selected` is explicitly `background:0 0`.
 
-This plugin repaints the first and turns the second into a slider.
+This plugin repaints the first, turns the second into a slider, and gives the third some bearings.
 
 ---
 
@@ -82,6 +85,39 @@ This plugin repaints the first and turns the second into a slider.
 - Each rung paints its own ember plume behind the knob: higher rungs burn longer
   and hotter
 
+### 3. 模型菜单可读性 / Model picker legibility
+
+模型菜单按官方尺寸（手机上也要用），所以这里**不动宽度**，改的是两处辨识：
+
+```
+┌──────────────────────────────┐
+│ 搜索模型…                    │
+├──────────────────────────────┤  ← 分组标题：14px 加粗 + 细分隔线
+│ PROVIDER 名                  │    滚动时吸顶，自带不透明底
+│                              │
+│ ▢ Model-A · x0.8             │
+│ ▣ Model-B · x0.12   🟢       │  ← 选中行：2px 内框 + 浮起感 + 绿点
+└──────────────────────────────┘
+```
+
+- **分组标题**加粗加大（12px → 14px / 700），下方一条细分隔线；
+  sticky 时补一层不透明底色，否则下一组的行会从标题底下穿过去
+- **当前模型**那一行：2px 内描边 + 顶亮底暗的双内阴影做出浮起感，
+  模型名加粗；原来的小对勾换成**绿色信号灯**（带光晕）
+- 绿点用 CSS 画的，不是 `🟢` 字符 —— emoji 字形在桌面与手机字体上大小不一，
+  画出来的点尺寸稳定
+- **宽度不变、行高不变、节点不增删**，所以移动端布局和宿主自己的尺寸计算都不受影响
+
+- Headings go bold and up a size with a rule beneath them, and get an opaque
+  bed so rows do not scroll through the sticky title
+- The selected row gets a 2px inner ring plus top-light/bottom-dark inner
+  shadows for a raised look; its name goes semi-bold and the shipped check mark
+  becomes a **green status lamp** with a glow
+- The lamp is drawn in CSS rather than the `🟢` character, because emoji glyphs
+  differ in size across desktop and mobile fonts
+- **No width change, no row-height change, no nodes added or removed**, so the
+  mobile layout and the host's own sizing are untouched
+
 ---
 
 ## 安装 / Install
@@ -114,6 +150,9 @@ host-side logic.
 | 菜单 | `[role="menu"][aria-label="模型与推理等级"]` |
 | 依赖服务 | `locale` |
 | 平台 | Web（桌面端与局域网访问一致） |
+
+模型菜单那部分用的是 `:has()` 与属性匹配，需要 Chromium 105+ 以上的选择器支持；
+桌面端与局域网访问都是同一个内核，两处一致。
 
 **为什么注入 DOM，而不是用槽位**
 
@@ -225,6 +264,14 @@ await directory.select({
   或直接移除节点关闭菜单时，循环都会自停，并在菜单重新可见后自行恢复。
 - **动画按需降级**：`prefers-reduced-motion: reduce` 时不隐藏 canvas（尾焰是视觉主体），
   而是降低绘制本身的抖动与亮度变化。
+- **模型菜单的选中行样式靠属性推断。** 官方没给选中项留 `aria-checked` 之外的稳定标记，
+  插件用三条选择器兜底（`[aria-checked="true"]` / `[data-selected]` / `[class*="_selected"]`）。
+  哈希类名每次构建都会变，所以用 `class*=` 子串匹配；真正起作用的是 `_selected` 那条
+  （官方定义为 `background:0 0`，即故意不给背景）。三条都不命中时**静默无效果**，不会误染。
+- **分组标题靠 `data-menu-group-heading` 定位**，另有 `section[data-menu-group] > div:first-child`
+  兜底。若官方改了属性名，结果是标题不再加粗，而不是样式串到别的元素上。
+- **外观增强效果无外发光。** 列表是 `overflow-y:auto`（隐式 `overflow-x:auto`），
+  菜单本身又 `overflow:hidden`，向外画的阴影会被裁掉 —— 浮起感是靠**内阴影**做出来的。
 
 ---
 
@@ -239,7 +286,7 @@ cd dsh-ember
 
 ```
 lib/index.js       loader 入口（空实现，dsh.client 声明才让宿主加载 client.js）
-lib/client.js      全部前端逻辑：CSS 注入、权限染色、滑块组件
+lib/client.js      全部前端逻辑：CSS 注入、权限染色、滑块组件、模型菜单样式
 cordis.patch.yml   profile patch 层，插入一个 loader entry
 docs/              探测报告与验证记录
 ```
