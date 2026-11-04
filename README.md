@@ -96,24 +96,40 @@ This plugin repaints the first, turns the second into a slider, and gives the th
 │ PROVIDER 名                  │    滚动时吸顶，自带不透明底
 │                              │
 │ ▢ Model-A · x0.8             │
-│ ▣ Model-B · x0.12   🟢       │  ← 选中行：2px 内框 + 浮起感 + 绿点
+│ ▣ Model-B · x0.12          ● │  ← 选中行：10% 洗色 + 2px 边 + 同色圆点
 └──────────────────────────────┘
 ```
 
 - **分组标题**加粗加大（12px → 14px / 700），下方一条细分隔线；
-  sticky 时补一层不透明底色，否则下一组的行会从标题底下穿过去
-- **当前模型**那一行：2px 内描边 + 顶亮底暗的双内阴影做出浮起感，
-  模型名加粗；原来的小对勾换成**绿色信号灯**（带光晕）
-- 绿点用 CSS 画的，不是 `🟢` 字符 —— emoji 字形在桌面与手机字体上大小不一，
+  sticky 时用主题自带的 `--dsw-alias-menu-group-header-fill` 铺底，
+  否则下一组的行会从标题底下穿过去
+- **当前模型**是一行**扁平**的选中态，只有三样东西：电光蓝
+  （`#0a84ff`）10% 透明度的一层洗色、2px 同色半透明边（55%）、模型名 600
+- **没有渐变、没有高光、没有内阴影、没有光晕。** 这些是拟物化痕迹，
+  叠在有色底上只会显得油腻；现代系统 UI 靠单一强调色 + 一层洗色 +
+  一条干净的边来区分选中，不靠伪造的光影
+- 原来的小对勾换成一个**同色实心圆点**（8px，`#0a84ff`，外圈一道 1px
+  同色细线定边）。和边框同色相，所以「行被选中」与「点在这儿」是**一个信号**，
+  不是两个颜色互相打架
+- 圆点用 CSS 画，不是 `🟢` 字符 —— emoji 字形在桌面与手机字体上大小不一，
   画出来的点尺寸稳定
 - **宽度不变、行高不变、节点不增删**，所以移动端布局和宿主自己的尺寸计算都不受影响
 
-- Headings go bold and up a size with a rule beneath them, and get an opaque
-  bed so rows do not scroll through the sticky title
-- The selected row gets a 2px inner ring plus top-light/bottom-dark inner
-  shadows for a raised look; its name goes semi-bold and the shipped check mark
-  becomes a **green status lamp** with a glow
-- The lamp is drawn in CSS rather than the `🟢` character, because emoji glyphs
+- Headings go bold and up a size with a rule beneath them, and get the theme's
+  own `--dsw-alias-menu-group-header-fill` bed so rows do not scroll through
+  the sticky title
+- The selected row is a **flat** state built from exactly three things: a 10%
+  wash of electric blue (`#0a84ff`), a 2px half-transparent edge of the same
+  colour (55%), and a semibold name
+- **No gradients, no highlights, no inner shadows, no glow.** Those are
+  skeuomorphic tells; stacked over a tinted row they read as greasy. Modern
+  system UI separates a selected state with one accent, one wash and one clean
+  edge — not with faked light
+- The shipped check mark becomes a **same-colour solid dot** (8px, `#0a84ff`,
+  with a 1px hairline ring for definition). Sharing the accent with the row
+  edge makes “this row is selected” and “the mark is here” **one signal**
+  instead of two colours competing
+- The dot is drawn in CSS rather than the `🟢` character, because emoji glyphs
   differ in size across desktop and mobile fonts
 - **No width change, no row-height change, no nodes added or removed**, so the
   mobile layout and the host's own sizing are untouched
@@ -270,8 +286,14 @@ await directory.select({
   （官方定义为 `background:0 0`，即故意不给背景）。三条都不命中时**静默无效果**，不会误染。
 - **分组标题靠 `data-menu-group-heading` 定位**，另有 `section[data-menu-group] > div:first-child`
   兜底。若官方改了属性名，结果是标题不再加粗，而不是样式串到别的元素上。
-- **外观增强效果无外发光。** 列表是 `overflow-y:auto`（隐式 `overflow-x:auto`），
-  菜单本身又 `overflow:hidden`，向外画的阴影会被裁掉 —— 浮起感是靠**内阴影**做出来的。
+- **选中行没有任何阴影，这是设计决定而非限制。** 列表是 `overflow-y:auto`
+  （隐式 `overflow-x:auto`），菜单本身又 `overflow:hidden`，向外画的阴影会被裁掉 ——
+  也就是说这里做不出真阴影。用内阴影去伪造景深正是前几版「油腻」的来源，所以现在
+  这一版干脆不用光影分层，改用「一层洗色 + 一条边」的扁平方案。
+- **电光蓝是写死的 `#0a84ff`，不走主题 token。** 主题自带的 business blue 是 `#4176e6`，
+  在 10% 洗色下亮度不足、在深色底上偏闷；所以这里刻意偏离主题色，换取两种主题下的
+  一致可读性。若要跟随主题，把 `rgba(10,132,255,…)` 换回
+  `var(--dsw-alias-state-business-primary)` 并调高 alpha。
 
 ---
 
