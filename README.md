@@ -88,18 +88,20 @@ DSH 的界面有四处可以更好用：
 
 | 状态 | 环的形态 |
 |---|---|
-| 运行中 | 蓝色短弧顺时针绕圈，4.2 秒一圈 |
-| 等你回答 | 主题警告色整圈呼吸，1.9 秒一个周期 |
-| 完成未读 | 主题成功色常亮，不动 |
+| 运行中 | 电光蓝短弧顺时针绕圈，4.2 秒一圈 |
+| 等你回答 | 霓虹黄整圈呼吸，1.9 秒一个周期 |
+| 完成未读 | 同一条霓虹黄呼吸 |
 | 空闲 | 没有环 |
 
 - 环贴在行自己的边界上（`inset:0`），和选中态背景共用同一条边
-- 线宽 **1px**，颜色走主题 token 并降低饱和度，不抢视觉中心
+- 线宽 **2px**，**满饱和不混透明** —— 浅色主题下混透明会被行背景冲淡成米色，所以直接用不透明电光色
 - 行首原来的小点**保留在 DOM 里**（无障碍 label 还在），只是完全透明，不影响布局也不影响读屏
 - 拖拽排序时环自动让位给官方的落点指示线
 - 尊重系统「减少动画」偏好：关掉动画后三种状态仍是可辨认的静态环
 
-**「完成」是什么意思**：跟随宿主的 `completionUnread` —— 绿色是「有结果你还没看」，点开那个会话就消失。它不是「已跑完」的永久徽章。
+**「等你回答」和「完成未读」用同一个脉冲**：两种都是「有事等你」，靠同一个节奏一眼扫到，而不是让它们竞争注意力。
+
+**「完成」是什么意思**：跟随宿主的 `completionUnread` —— 有结果你还没看，点开那个会话就消失。它不是「已跑完」的永久徽章。
 
 ---
 
@@ -232,6 +234,7 @@ CSS 拆成四段，各自一个 `<style>` 标签。开关就是 `tag.disabled = 
 - **分组标题靠 `data-menu-group-heading` 定位**，另有 `section[data-menu-group] > div:first-child` 兜底。官方若改属性名，结果是标题不再加粗，而不是样式串到别的元素上
 - **选中行没有阴影是设计决定。** 列表是 `overflow-y:auto`，菜单是 `overflow:hidden`，向外画的阴影会被裁掉；用内阴影伪造景深正是前几版「油腻」的来源
 - **电光蓝是写死的 `#0a84ff`，不走主题 token。** 主题自带的 business blue 是 `#4176e6`，在 10% 洗色下亮度不足。若要跟随主题，把 `rgba(10,132,255,…)` 换回 `var(--dsw-alias-state-business-primary)` 并调高 alpha
+- **状态环配色是写死的电光值，不走主题 token。** 运行中 `#00a2ff`→`#beeeff` 梯度，等你/完成 `#ffd400`。之所以不用 `color-mix(… , transparent)` 降饱和：混透明会把颜色朝环背后的行填充混，浅色主题下无论比例多高都只能是米黄。深色主题下霓虹黄可能偏亮，如需分主题微调，改 `lib/client.js` 里 `css_ring` 的两条 `background`
 - **状态环在扁矩形上快慢不均。** 短边只有 13~18 度却要走 32px，长边 162~167 度走 200px，像素速度差约 1.4 倍。已通过加长弧 + 放慢单圈摊薄，但几何根源无法消除
 
 ---
@@ -346,18 +349,20 @@ In the left session list, each session's state moves from a dot at the row's lea
 
 | State | What the ring does |
 |---|---|
-| Running | A short blue arc travels clockwise, one lap every 4.2s |
-| Waiting on you | The whole ring breathes in the theme's warning colour, 1.9s a cycle |
-| Done (unread) | Steady success colour, no motion |
+| Running | A short electric-blue arc travels clockwise, one lap every 4.2s |
+| Waiting on you | The whole ring breathes in neon yellow, 1.9s a cycle |
+| Done (unread) | The same neon-yellow breath |
 | Idle | No ring |
 
 - The ring sits flush on the row's own paint box (`inset:0`), sharing the edge the selection highlight uses
-- **1px** wide, coloured from theme tokens and mixed down toward transparent so it does not pull the eye off the titles
+- **2px** wide, painted at **full saturation with no transparency mix** — mixing toward transparent blends against whatever sits behind the ring, which on a light theme is a near-white row, so any ratio above zero washed out to beige
 - The leading dot **stays in the DOM** with its accessibility label, painted fully transparent — no layout shift, no loss for screen readers
 - During drag-reorder the ring yields to the host's own drop indicator
 - Respects `prefers-reduced-motion`: with motion off, all three states remain legible as static rings
 
-**What “done” means**: it follows the host's `completionUnread` — green is “there is a result you have not looked at”, and it clears the moment you open that session. It is not a permanent “finished” badge.
+**Waiting and done share one pulse**: both mean "there is something here for you", so they use one rhythm you can spot in a single sweep instead of competing for attention.
+
+**What “done” means**: it follows the host's `completionUnread` — there is a result you have not looked at, and it clears the moment you open that session. It is not a permanent “finished” badge.
 
 ---
 
@@ -490,6 +495,7 @@ Reading and writing the setting fails open at every step: no `localStorage`, a c
 - **Group headings are located via `data-menu-group-heading`**, with `section[data-menu-group] > div:first-child` as a fallback. If the host renames the attribute the headings simply stop bolding — the styles never leak onto another element
 - **The selected row has no shadow, by design.** The list is `overflow-y:auto` and the menu is `overflow:hidden`, so an outer shadow would be clipped; faking depth with an inner shadow is exactly what read as greasy in earlier versions
 - **Electric blue is a hard-coded `#0a84ff`, not a theme token.** The theme's own business blue is `#4176e6`, which is too dim under a 10% wash. To follow the theme instead, swap `rgba(10,132,255,…)` back to `var(--dsw-alias-state-business-primary)` and raise the alpha
+- **The ring's colours are hard-coded electric values, not theme tokens.** Running uses a `#00a2ff` → `#beeeff` gradient; waiting/done use `#ffd400`. `color-mix(… , transparent)` was deliberately avoided: mixing toward transparent blends against whatever sits behind the ring, which on a light theme is a near-white row, so no ratio above zero could avoid washing out to beige. On a dark theme the neon yellow may read as too bright — to tune per theme, edit the two `background` declarations in `css_ring` in `lib/client.js`
 - **The ring runs unevenly on a flat box.** The two short edges span only 13–18deg while the long ones span 162–167deg, so pixel speed differs by about 1.4x. Lengthening the arc and slowing the lap spreads the difference out, but the geometric cause cannot be removed
 
 ---

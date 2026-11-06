@@ -1,6 +1,6 @@
 {
   "name": "dsh-ember",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "四件事一个插件：完全权限变红、推理等级滑块、模型菜单可辨识、会话状态环 | Full access in red, effort slider, legible model picker, session status ring — UI enhancement for DeepSeek Harness",
   "keywords": [
     "dsh",
