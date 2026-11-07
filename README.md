@@ -125,6 +125,12 @@ DSH 的界面有四处可以更好用：
 ## 安装
 
 ```bash
+dsh plugin add dsh-ember
+```
+
+也可以从 GitHub 直接装（会走源码构建）：
+
+```bash
 dsh plugin add https://github.com/REALOIYO/dsh-ember
 ```
 
@@ -384,6 +390,12 @@ The plugin detail page (**Plugins → Installed → dsh-ember**) carries four sw
 ---
 
 ## Install
+
+```bash
+dsh plugin add dsh-ember
+```
+
+Or straight from GitHub (builds from source):
 
 ```bash
 dsh plugin add https://github.com/REALOIYO/dsh-ember
