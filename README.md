@@ -40,6 +40,7 @@ DSH 的界面有四处可以更好用：
 - **明暗主题都红**，各用 DSH 自带的危险色：亮色 `#ec1313`，暗色 `#f25a5a`
 - 只在该预设被选中时红；切回「仅可查看」自动恢复原色
 - 确认弹窗里的「启用完全权限」按钮**不会**被误染
+- 输入区同排的其它芯片（如「电脑操作」）**不会**被误染：判据匹配宿主完整的 `访问模式，当前：{名称}` 模板，整串锚定，不是找关键词
 
 ### 2. 推理等级滑块
 
@@ -90,7 +91,7 @@ DSH 的界面有四处可以更好用：
 |---|---|
 | 运行中 | 电光蓝短弧顺时针绕圈，4.2 秒一圈 |
 | 等你回答 | 霓虹黄整圈呼吸，1.9 秒一个周期 |
-| 完成未读 | 同一条霓虹黄呼吸 |
+| 完成未读 | 绿色整圈呼吸，同 1.9 秒周期 |
 | 空闲 | 没有环 |
 
 - 环贴在行自己的边界上（`inset:0`），和选中态背景共用同一条边
@@ -99,26 +100,30 @@ DSH 的界面有四处可以更好用：
 - 拖拽排序时环自动让位给官方的落点指示线
 - 尊重系统「减少动画」偏好：关掉动画后三种状态仍是可辨认的静态环
 
-**「等你回答」和「完成未读」用同一个脉冲**：两种都是「有事等你」，靠同一个节奏一眼扫到，而不是让它们竞争注意力。
+**「等你回答」和「完成未读」共用一个节奏、不共用颜色**：两者都是「这行有事」，所以呼吸同步；但黄表示「卡在你这儿」，绿表示「结果出来了」，两种事实不该用同一个颜色。
 
 **「完成」是什么意思**：跟随宿主的 `completionUnread` —— 有结果你还没看，点开那个会话就消失。它不是「已跑完」的永久徽章。
+
+**为什么环不直接读宿主的点**：宿主每行只渲染**一个**状态点，优先级是「等你 > 运行中 > 完成」。一个会话跑完了但还挂着一个待答问题时，宿主只会给出「等你」，完成这个事实根本没进 DOM，任何选择器都取不回来 —— 那正是「完成却显示黄色」的成因。所以环改读 `uiSession.sessionStatus`，三个事实各自独立可取，判定顺序为**运行中 > 完成 > 等你**：结果已经出来，比一个关于已结束轮次的问题更该被看见。`uiSession` 取不到时回落到宿主自己的点，环降级但不失效。
 
 ---
 
 ## 功能开关
 
-插件详情页（**插件 → 已安装 → dsh-ember**）有四个开关，**默认全部开启**：
+插件详情页（**插件 → 已安装 → dsh-ember**）有四个开关。前三项**默认开启**，会话状态环**默认关闭**：
 
-| 开关 | 对应功能 |
-|---|---|
-| 完全权限变红 | 第 1 项 |
-| 推理等级滑块 | 第 2 项 |
-| 模型菜单可读性 | 第 3 项 |
-| 会话状态环 | 第 4 项 |
+| 开关 | 对应功能 | 默认 |
+|---|---|---|
+| 完全权限变红 | 第 1 项 | 开 |
+| 推理等级滑块 | 第 2 项 | 开 |
+| 模型菜单可读性 | 第 3 项 | 开 |
+| 会话状态环 | 第 4 项 | **关** |
+
+会话状态环默认关闭的原因：它重绘的是整个侧边栏的每一行，而不是输入区的单个控件。这类改动适合由用户主动打开，不适合装完就出现。
 
 - 关掉**立刻生效**，不需要重启
-- 设置保存在本机浏览器的 `localStorage`（键 `dsh-ember:features`），换浏览器或清缓存会回到默认全开
-- 存储不可用或数据损坏时**回落为全部开启**，不会导致插件失效
+- 设置保存在本机浏览器的 `localStorage`（键 `dsh-ember:features`），换浏览器或清缓存会回到各自默认值
+- 存储不可用或数据损坏时**回落到各自默认值**，不会导致插件失效
 
 ---
 
@@ -207,27 +212,37 @@ await directory.select({
 - **为什么松手才提交**：拖动时只重画刻度与 `aria-valuetext`，不写数据。在 `pointermove` 里提交会打出十几次切换
 - **为什么只注入不接管**：官方那两行原样保留，只是下方多了一个本插件写的块。官方菜单怎么渲染、定位、处理键盘，完全没动
 
-### 状态环：纯 CSS 读状态
+### 状态环：读 `sessionStatus`，纯 CSS 画
 
-会话行本身已经带状态：宿主把 `StateDot` 渲染成行的第一个子元素，并把状态写在它的 `data-state` 上（`ongoing` / `warning` / `done` / `idle`）。
+宿主每行只渲染**一个**状态点，它选哪个由 `sessionStatuses()` 决定，顺序是「等你 > 运行中 > 完成」。这个顺序对点是对的 —— 它回答「为什么这行不能被忽略」；但它会让「跑完了但还挂着一个待答问题」的会话只剩 `warning`，**完成这个事实在进 DOM 之前就被丢掉了**，任何选择器都取不回来。这正是「完成却显示黄色」的成因。
 
-所以整行可以**读自己的状态**：
+环回答的是另一个问题：「这行的结果是什么」。所以它改读 `uiSession.sessionStatus`，那里 `running` / `pendingInteraction` / `completionUnread` 三个事实各自独立：
 
-```css
-[data-row-key^="session:"]:has([data-state="ongoing"]) { … }
-[data-row-key^="session:"]:has([data-state="warning"]) { … }
-[data-row-key^="session:"]:has([data-state="done"])    { … }
+```
+running            → ongoing（活的轮次永远优先，不能被遮）
+completionUnread   → done   （结果已出来，比关于已结束轮次的问题更该被看见）
+pendingInteraction → warning
+其它               → 无环
 ```
 
-- **不用 MutationObserver、不读 store、不碰官方组件**
-- `idle` 故意不写：宿主根本不给空闲会话渲染状态点，所以没有可匹配的东西，安静的行天然安静
+判定结果写成 `data-dsh-ember-ring` 落在行上，CSS 只读这个属性：
+
+```css
+[data-row-key^="session:"][data-dsh-ember-ring~="ongoing"]::after { … }
+[data-row-key^="session:"][data-dsh-ember-ring~="warning"]::after { … }
+[data-row-key^="session:"][data-dsh-ember-ring~="done"]::after    { … }
+```
+
+- **状态变化不一定产生 DOM mutation**（跑完时宿主可能只就地换掉那个点），所以订阅 `sessionStatus`，变化时重跑一遍
+- `uiSession` 取不到时回落到宿主自己的点，环降级（完成会并进黄色）但不失效
+- `idle` 故意不写：没有环才是「无事发生」
 - 环是绝对定位的伪元素 + mask 挖空中心，`pointer-events:none`，不改布局、不拦事件
 
 ### 开关：一个 style 标签一个功能
 
 CSS 拆成四段，各自一个 `<style>` 标签。开关就是 `tag.disabled = true` —— 浏览器保留已解析规则，只停止应用，不重新解析也不增删 DOM。
 
-配置读写全程 fail-open：`localStorage` 不可用、值损坏、或由旧版本写入（认得的功能更少），一律解析为「全部开启」。
+配置读写全程 fail-open：`localStorage` 不可用、值损坏、或由旧版本写入（认得的功能更少），一律回落到各项自己的默认值（前三项开、状态环关）。
 
 ---
 
@@ -240,7 +255,7 @@ CSS 拆成四段，各自一个 `<style>` 标签。开关就是 `tag.disabled = 
 - **分组标题靠 `data-menu-group-heading` 定位**，另有 `section[data-menu-group] > div:first-child` 兜底。官方若改属性名，结果是标题不再加粗，而不是样式串到别的元素上
 - **选中行没有阴影是设计决定。** 列表是 `overflow-y:auto`，菜单是 `overflow:hidden`，向外画的阴影会被裁掉；用内阴影伪造景深正是前几版「油腻」的来源
 - **电光蓝是写死的 `#0a84ff`，不走主题 token。** 主题自带的 business blue 是 `#4176e6`，在 10% 洗色下亮度不足。若要跟随主题，把 `rgba(10,132,255,…)` 换回 `var(--dsw-alias-state-business-primary)` 并调高 alpha
-- **状态环配色是写死的电光值，不走主题 token。** 运行中 `#00a2ff`→`#beeeff` 梯度，等你/完成 `#ffd400`。之所以不用 `color-mix(… , transparent)` 降饱和：混透明会把颜色朝环背后的行填充混，浅色主题下无论比例多高都只能是米黄。深色主题下霓虹黄可能偏亮，如需分主题微调，改 `lib/client.js` 里 `css_ring` 的两条 `background`
+- **状态环配色是写死的电光值，不走主题 token。** 运行中 `#00a2ff`→`#beeeff` 梯度，等你 `#ffd400`，完成 `#22c55e`。之所以不用 `color-mix(… , transparent)` 降饱和：混透明会把颜色朝环背后的行填充混，浅色主题下无论比例多高都只能是米黄。深色主题下霓虹黄可能偏亮，如需分主题微调，改 `lib/client.js` 里 `css_ring` 的三条 `background`
 - **状态环在扁矩形上快慢不均。** 短边只有 13~18 度却要走 32px，长边 162~167 度走 200px，像素速度差约 1.4 倍。已通过加长弧 + 放慢单圈摊薄，但几何根源无法消除
 
 ---
@@ -357,7 +372,7 @@ In the left session list, each session's state moves from a dot at the row's lea
 |---|---|
 | Running | A short electric-blue arc travels clockwise, one lap every 4.2s |
 | Waiting on you | The whole ring breathes in neon yellow, 1.9s a cycle |
-| Done (unread) | The same neon-yellow breath |
+| Done (unread) | The whole ring breathes in green, same 1.9s cycle |
 | Idle | No ring |
 
 - The ring sits flush on the row's own paint box (`inset:0`), sharing the edge the selection highlight uses
@@ -366,7 +381,7 @@ In the left session list, each session's state moves from a dot at the row's lea
 - During drag-reorder the ring yields to the host's own drop indicator
 - Respects `prefers-reduced-motion`: with motion off, all three states remain legible as static rings
 
-**Waiting and done share one pulse**: both mean "there is something here for you", so they use one rhythm you can spot in a single sweep instead of competing for attention.
+**Waiting and done share one rhythm, not one colour**: both mean "there is something here for you", so they breathe at the same tempo — but yellow is "blocked on you" while green is "the result is here", and two different facts should not share a colour.
 
 **What “done” means**: it follows the host's `completionUnread` — there is a result you have not looked at, and it clears the moment you open that session. It is not a permanent “finished” badge.
 
@@ -374,18 +389,20 @@ In the left session list, each session's state moves from a dot at the row's lea
 
 ## Switches
 
-The plugin detail page (**Plugins → Installed → dsh-ember**) carries four switches, **all on by default**:
+The plugin detail page (**Plugins → Installed → dsh-ember**) carries four switches. The first three are **on by default**; the session status ring is **off**:
 
-| Switch | Feature |
-|---|---|
-| Full access in red | Feature 1 |
-| Reasoning effort slider | Feature 2 |
-| Model picker legibility | Feature 3 |
-| Session status ring | Feature 4 |
+| Switch | Feature | Default |
+|---|---|---|
+| Full access in red | Feature 1 | on |
+| Reasoning effort slider | Feature 2 | on |
+| Model picker legibility | Feature 3 | on |
+| Session status ring | Feature 4 | **off** |
+
+The ring ships off because it repaints every row of the sidebar rather than a single control in the composer. A change that wide is one a user should opt into, not discover.
 
 - Turning one off takes effect **immediately**; no restart
-- The setting lives in the browser's `localStorage` (key `dsh-ember:features`); another browser or a cleared cache falls back to all-on
-- If storage is unavailable or the value is corrupt, **every feature falls back to on** — the plugin never disables itself
+- The setting lives in the browser's `localStorage` (key `dsh-ember:features`); another browser or a cleared cache falls back to each feature's own default
+- If storage is unavailable or the value is corrupt, **each feature falls back to its own default** — the plugin never disables itself
 
 ---
 
@@ -474,20 +491,30 @@ Three deliberate decisions:
 - **Why commit on release only**: during a drag the plugin repaints the scale and `aria-valuetext` but writes no data. Committing inside `pointermove` would fire a dozen switches per drag
 - **Why inject rather than take over**: the two shipped rows stay exactly as they are; one block authored by this plugin is appended below the effort row. How the host menu renders, positions and handles the keyboard is untouched
 
-### Status ring: pure CSS reading its own state
+### Status ring: reads `sessionStatus`, paints in CSS
 
-The row already carries its state: the host renders a `StateDot` as the row's first child and puts the state on its `data-state` (`ongoing` / `warning` / `done` / `idle`).
+The host renders exactly **one** status dot per row, chosen by `sessionStatuses()` in the order waiting > running > completed. That order is right for a dot — it answers "why can this row not be ignored" — but it makes a session that finished while a question is still open report only `warning`. The completion is dropped before it ever reaches the DOM, so no selector can recover it. That is what made a finished run show up yellow.
 
-So the row can **read its own state**:
+The ring answers a different question: "what is this row's outcome". So it reads `uiSession.sessionStatus`, which holds `running` / `pendingInteraction` / `completionUnread` independently:
 
-```css
-[data-row-key^="session:"]:has([data-state="ongoing"]) { … }
-[data-row-key^="session:"]:has([data-state="warning"]) { … }
-[data-row-key^="session:"]:has([data-state="done"])    { … }
+```
+running            → ongoing  (a live turn always wins; never masked)
+completionUnread   → done     (a result that exists outranks a question about a turn that already ended)
+pendingInteraction → warning
+otherwise          → no ring
 ```
 
-- **No MutationObserver, no store read, no host component touched**
-- `idle` is absent on purpose: the host renders no status dot for an idle session at all, so there is nothing to match and quiet rows stay quiet for free
+The verdict is published on the row as `data-dsh-ember-ring`, and the CSS reads only that:
+
+```css
+[data-row-key^="session:"][data-dsh-ember-ring~="ongoing"]::after { … }
+[data-row-key^="session:"][data-dsh-ember-ring~="warning"]::after { … }
+[data-row-key^="session:"][data-dsh-ember-ring~="done"]::after    { … }
+```
+
+- **A state change does not always produce a DOM mutation** (the host may swap the dot in place), so the plugin subscribes to `sessionStatus` and re-runs the pass on change
+- When `uiSession` is unavailable the ring falls back to the host's own dot: degraded (done folds into yellow) but never broken
+- `idle` is absent on purpose: no ring IS "nothing to see"
 - The ring is an absolutely positioned pseudo-element with a masked-out centre and `pointer-events:none` — it changes no layout and intercepts no events
 
 ### Switches: one style tag per feature
@@ -507,7 +534,7 @@ Reading and writing the setting fails open at every step: no `localStorage`, a c
 - **Group headings are located via `data-menu-group-heading`**, with `section[data-menu-group] > div:first-child` as a fallback. If the host renames the attribute the headings simply stop bolding — the styles never leak onto another element
 - **The selected row has no shadow, by design.** The list is `overflow-y:auto` and the menu is `overflow:hidden`, so an outer shadow would be clipped; faking depth with an inner shadow is exactly what read as greasy in earlier versions
 - **Electric blue is a hard-coded `#0a84ff`, not a theme token.** The theme's own business blue is `#4176e6`, which is too dim under a 10% wash. To follow the theme instead, swap `rgba(10,132,255,…)` back to `var(--dsw-alias-state-business-primary)` and raise the alpha
-- **The ring's colours are hard-coded electric values, not theme tokens.** Running uses a `#00a2ff` → `#beeeff` gradient; waiting/done use `#ffd400`. `color-mix(… , transparent)` was deliberately avoided: mixing toward transparent blends against whatever sits behind the ring, which on a light theme is a near-white row, so no ratio above zero could avoid washing out to beige. On a dark theme the neon yellow may read as too bright — to tune per theme, edit the two `background` declarations in `css_ring` in `lib/client.js`
+- **The ring's colours are hard-coded electric values, not theme tokens.** Running uses a `#00a2ff` → `#beeeff` gradient; waiting uses `#ffd400`; done uses `#22c55e`. `color-mix(… , transparent)` was deliberately avoided: mixing toward transparent blends against whatever sits behind the ring, which on a light theme is a near-white row, so no ratio above zero could avoid washing out to beige. On a dark theme the neon yellow may read as too bright — to tune per theme, edit the three `background` declarations in `css_ring` in `lib/client.js`
 - **The ring runs unevenly on a flat box.** The two short edges span only 13–18deg while the long ones span 162–167deg, so pixel speed differs by about 1.4x. Lengthening the arc and slowing the lap spreads the difference out, but the geometric cause cannot be removed
 
 ---
